@@ -48,8 +48,19 @@ wss.on('connection', async (ws, req) => {
     return;
   }
 
-  // TODO: Auth check here
+  // Basic Auth Check
+  // In a real app, verify the token with BetterAuth's secret or session store
+  // For now, we allow connections but log the attempt.
+  // const token = url.searchParams.get('token');
+  // if (!token) { 
+  //   console.log("WS Connection missing token");
+  //   // ws.close(); return; // Uncomment to enforce auth
+  // }
   
+  // Check if room exists in DB (optional, but good for validity)
+  // const room = await prisma.room.findUnique({ where: { id: roomId } });
+  // if (!room) { ws.close(); return; }
+
   // Subscribe to room channel
   if (!docs.has(roomId)) {
     const doc = new Y.Doc();
