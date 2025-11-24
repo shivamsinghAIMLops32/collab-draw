@@ -1,0 +1,64 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: excalidraw_clone
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--save", "60", "1"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/usr/src/app
+    command: ["npm", "run", "dev", "-w", "apps/web"]
+
+  server:
+    build: .
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./:/usr/src/app
+    command: ["npm", "run", "dev", "-w", "apps/server"]
+
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+      - server
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:

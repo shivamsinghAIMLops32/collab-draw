@@ -1,0 +1,18 @@
+{
+    local_certs
+}
+
+localhost:80 {
+    reverse_proxy /ws* app:3000 {
+        # Next.js HMR support
+        header_up Connection {http.request.header.Connection}
+        header_up Upgrade {http.request.header.Upgrade}
+    }
+
+    reverse_proxy /socket* server:3001 {
+        header_up Connection {http.request.header.Connection}
+        header_up Upgrade {http.request.header.Upgrade}
+    }
+
+    reverse_proxy * app:3000
+}
