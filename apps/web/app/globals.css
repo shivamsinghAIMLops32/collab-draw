@@ -40,11 +40,19 @@ body {
 }
 
 .tool-btn {
-  @apply p-2 rounded-lg transition-colors hover:bg-[var(--surface-hover)] text-[var(--muted)];
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+  color: var(--muted);
+}
+
+.tool-btn:hover {
+  background-color: var(--surface-hover);
 }
 
 .tool-btn.active {
-  @apply bg-[var(--primary)] text-[var(--primary-foreground)];
+  background-color: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .canvas-container {

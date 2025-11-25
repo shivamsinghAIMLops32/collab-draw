@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
 
     if (!sessionCookie) {
       const url = request.nextUrl.clone();
-      url.pathname = "/api/auth/signin";
+      url.pathname = "/signin";
       url.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(url);
     }

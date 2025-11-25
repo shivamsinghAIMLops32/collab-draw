@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/index.ts",
+    "dev": "node dist/index.js",
     "build": "tsc"
   },
   "keywords": [],
@@ -19,7 +19,18 @@
     "ioredis": "^5.8.2",
     "redis": "^5.10.0",
     "ws": "^8.18.3",
-    "y-websocket": "^3.0.0",
-    "yjs": "^13.6.27"
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.27",
+    "better-auth": "^1.4.1",
+    "@repo/db": "*"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.19.25",
+    "@types/ws": "^8.5.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

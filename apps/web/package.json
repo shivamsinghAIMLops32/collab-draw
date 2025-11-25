@@ -14,11 +14,16 @@
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.4.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
     "next": "16.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "roughjs": "^4.6.6",
+    "tailwind-merge": "^2.6.0",
     "uuid": "^13.0.0",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.27",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

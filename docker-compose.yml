@@ -28,8 +28,11 @@ services:
       - redis
     ports:
       - "3000:3000"
-    volumes:
-      - ./:/usr/src/app
+    # volumes:
+    #   - ./:/usr/src/app
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/excalidraw_clone
     command: ["npm", "run", "dev", "-w", "apps/web"]
 
   server:
@@ -40,8 +43,11 @@ services:
       - redis
     ports:
       - "3001:3001"
-    volumes:
-      - ./:/usr/src/app
+    # volumes:
+    #   - ./:/usr/src/app
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/excalidraw_clone
     command: ["npm", "run", "dev", "-w", "apps/server"]
 
   caddy:
