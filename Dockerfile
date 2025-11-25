@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /usr/src/app
 
@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY apps/web/package*.json ./apps/web/
 COPY apps/server/package*.json ./apps/server/
 COPY packages/db/package*.json ./packages/db/
-COPY packages/config/package*.json ./packages/config/
+
 
 RUN npm install
 

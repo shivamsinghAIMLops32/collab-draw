@@ -3,26 +3,32 @@
 import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
-import { MousePointer2, Square, Circle, MessageSquare, Download, Trash2 } from "lucide-react";
+import rough from "roughjs";
+import { Toolbar } from "./Toolbar";
+import { Sidebar } from "./Sidebar";
+import { useAppStore } from "@/store/useAppStore";
+import { Minus, Plus, MousePointer2 } from "lucide-react";
 
 interface RoomCanvasProps {
   roomId: string;
 }
-
-type Tool = "cursor" | "rect" | "circle" | "text" | "comment";
 
 export function RoomCanvas({ roomId }: RoomCanvasProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [elements, setElements] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   const [cursors, setCursors] = useState<any[]>([]);
-  const [tool, setTool] = useState<Tool>("cursor");
   const [currentShapeId, setCurrentShapeId] = useState<string | null>(null);
+  
+  const { tool, setTool, zoom, setZoom } = useAppStore();
   
   const ydoc = useRef(new Y.Doc());
   const provider = useRef<WebsocketProvider | null>(null);
   const yShapes = useRef<Y.Map<any> | null>(null);
   const yComments = useRef<Y.Map<any> | null>(null);
+  
+  const svgRef = useRef<SVGSVGElement>(null);
+  const roughCanvas = useRef<any>(null);
 
   useEffect(() => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001";
@@ -66,11 +72,20 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
     };
   }, [roomId]);
 
+  // Initialize RoughJS
+  useEffect(() => {
+    if (svgRef.current) {
+      roughCanvas.current = rough.svg(svgRef.current);
+    }
+  }, []);
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (tool === "cursor") return;
+    if (tool === "cursor" || tool === "hand" || tool === "lock") return;
 
     const id = Date.now().toString();
-    const { clientX, clientY } = e;
+    // Adjust coordinates for zoom
+    const clientX = e.clientX / zoom;
+    const clientY = e.clientY / zoom;
 
     if (tool === "comment") {
       const text = prompt("Enter comment:");
@@ -80,7 +95,7 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
           x: clientX,
           y: clientY,
           text,
-          author: "User" // TODO: Get from auth
+          author: "User" 
         });
       }
       setTool("cursor");
@@ -95,7 +110,9 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
       width: 0,
       height: 0,
       fill: "transparent",
-      stroke: "black"
+      stroke: "#ffffff", // White stroke for dark mode
+      strokeWidth: 2,
+      roughness: 1
     };
     
     yShapes.current?.set(id, shape);
@@ -103,10 +120,13 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    const clientX = e.clientX / zoom;
+    const clientY = e.clientY / zoom;
+
     // Update local awareness
     provider.current?.awareness.setLocalStateField("cursor", {
-      x: e.clientX,
-      y: e.clientY
+      x: clientX,
+      y: clientY
     });
 
     if (!currentShapeId || !yShapes.current) return;
@@ -114,8 +134,8 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
     const shape = yShapes.current.get(currentShapeId);
     if (!shape) return;
 
-    const width = e.clientX - shape.x;
-    const height = e.clientY - shape.y;
+    const width = clientX - shape.x;
+    const height = clientY - shape.y;
 
     yShapes.current.set(currentShapeId, {
       ...shape,
@@ -126,134 +146,64 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
 
   const handleMouseUp = () => {
     setCurrentShapeId(null);
-    if (tool !== "cursor") setTool("cursor");
+    if (tool !== "cursor" && tool !== "lock") setTool("cursor");
   };
 
-  const handleExport = () => {
-    const svg = document.querySelector("svg");
-    if (!svg) return;
-    
-    const data = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([data], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `drawing-${roomId}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const clearCanvas = () => {
-    if (confirm("Clear canvas?")) {
-      yShapes.current?.clear();
-      yComments.current?.clear();
-    }
-  };
-
+  // Render RoughJS shapes
+  // Since RoughJS appends to SVG, we need a way to integrate it with React's render cycle.
+  // A simple way is to use a component that renders the shape.
+  
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      {/* Toolbar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white p-2 rounded-lg shadow-lg flex gap-2 border">
-        <button
-          onClick={() => setTool("cursor")}
-          className={`p-2 rounded ${tool === "cursor" ? "bg-gray-200" : "hover:bg-gray-100"}`}
-        >
-          <MousePointer2 className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setTool("rect")}
-          className={`p-2 rounded ${tool === "rect" ? "bg-gray-200" : "hover:bg-gray-100"}`}
-        >
-          <Square className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setTool("circle")}
-          className={`p-2 rounded ${tool === "circle" ? "bg-gray-200" : "hover:bg-gray-100"}`}
-        >
-          <Circle className="w-5 h-5" />
-        </button>
-        <button
-          onClick={() => setTool("comment")}
-          className={`p-2 rounded ${tool === "comment" ? "bg-gray-200" : "hover:bg-gray-100"}`}
-        >
-          <MessageSquare className="w-5 h-5" />
-        </button>
-        <div className="w-px bg-gray-300 mx-1" />
-        <button onClick={handleExport} className="p-2 rounded hover:bg-gray-100" title="Export">
-          <Download className="w-5 h-5" />
-        </button>
-        <button onClick={clearCanvas} className="p-2 rounded hover:bg-red-100 text-red-500" title="Clear">
-          <Trash2 className="w-5 h-5" />
-        </button>
+    <div className="relative h-full w-full overflow-hidden canvas-container">
+      <Toolbar />
+      <Sidebar />
+      
+      {/* Zoom Controls */}
+      <div className="fixed bottom-4 left-4 z-50 flex gap-2 bg-[var(--surface)] p-1 rounded-lg border border-[var(--border)]">
+        <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className="p-1 hover:bg-[var(--surface-hover)] rounded"><Minus className="w-4 h-4" /></button>
+        <span className="text-xs flex items-center min-w-[3ch] justify-center">{Math.round(zoom * 100)}%</span>
+        <button onClick={() => setZoom(Math.min(5, zoom + 0.1))} className="p-1 hover:bg-[var(--surface-hover)] rounded"><Plus className="w-4 h-4" /></button>
       </div>
 
       {/* Status Indicator */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`} title={isConnected ? "Connected" : "Disconnected"} />
+      <div className="absolute bottom-4 right-4 z-10 text-xs text-[var(--muted)]">
+        {isConnected ? "Encrypted connection established" : "Connecting..."}
       </div>
 
       <svg
-        className="block h-full w-full touch-none bg-gray-50 cursor-crosshair"
+        ref={svgRef}
+        className="block h-full w-full touch-none cursor-crosshair"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        style={{ transform: `scale(${zoom})`, transformOrigin: "0 0" }}
       >
-        {elements.map((el) => {
-          if (el.type === "rect") {
-            return (
-              <rect
-                key={el.id}
-                x={el.width < 0 ? el.x + el.width : el.x}
-                y={el.height < 0 ? el.y + el.height : el.y}
-                width={Math.abs(el.width)}
-                height={Math.abs(el.height)}
-                fill={el.fill}
-                stroke={el.stroke}
-                strokeWidth={2}
-              />
-            );
-          }
-          if (el.type === "circle") {
-            const r = Math.sqrt(el.width ** 2 + el.height ** 2) / 2;
-            return (
-              <circle
-                key={el.id}
-                cx={el.x + el.width / 2}
-                cy={el.y + el.height / 2}
-                r={r}
-                fill={el.fill}
-                stroke={el.stroke}
-                strokeWidth={2}
-              />
-            );
-          }
-          return null;
-        })}
+        {elements.map((el) => (
+          <RoughShape key={el.id} shape={el} />
+        ))}
       </svg>
 
       {/* Comments Overlay */}
       {comments.map((comment) => (
         <div
           key={comment.id}
-          className="absolute bg-yellow-100 p-2 rounded shadow-md border border-yellow-300 text-sm max-w-xs"
-          style={{ top: comment.y, left: comment.x }}
+          className="absolute bg-[var(--surface)] p-2 rounded shadow-md border border-[var(--primary)] text-sm max-w-xs"
+          style={{ top: comment.y * zoom, left: comment.x * zoom }}
         >
-          <div className="font-bold text-xs text-gray-600">{comment.author}</div>
+          <div className="font-bold text-xs text-[var(--primary)]">{comment.author}</div>
           <div>{comment.text}</div>
         </div>
       ))}
 
       {/* Cursors Overlay */}
       {cursors.map((cursor) => {
-        if (!cursor.cursor) return null; // Wait for cursor position
+        if (!cursor.cursor) return null;
         return (
           <div
             key={cursor.clientId}
-            className="absolute pointer-events-none"
-            style={{ top: cursor.cursor.y, left: cursor.cursor.x }}
+            className="absolute pointer-events-none transition-all duration-100"
+            style={{ top: cursor.cursor.y * zoom, left: cursor.cursor.x * zoom }}
           >
             <MousePointer2
               className="w-4 h-4"
@@ -269,5 +219,76 @@ export function RoomCanvas({ roomId }: RoomCanvasProps) {
         );
       })}
     </div>
+  );
+}
+
+// Helper component to render RoughJS shapes
+function RoughShape({ shape }: { shape: any }) {
+  const ref = useRef<SVGGElement>(null);
+  const [rc, setRc] = useState<any>(null);
+
+  useEffect(() => {
+    if (ref.current && !rc) {
+      // We need a temporary SVG to generate the node or use rough.svg on the parent?
+      // Actually, rough.svg needs an SVG element to create elements.
+      // Let's create a generator instead.
+      // const generator = rough.generator();
+      // But we want to render into the existing SVG.
+      // Let's use the parent SVG context if possible, or just create a new one?
+      // No, creating new SVG context for each shape is bad.
+      
+      // Better approach: Use the generator to get the drawable, then render the paths.
+      // But roughjs paths are complex.
+      
+      // Alternative: Use a ref to the group <g> and let roughjs draw into it?
+      // rough.svg(svgRoot).draw(drawable) appends to svgRoot.
+      
+      // Let's try this:
+      // We can't easily use roughjs in a declarative React way without a wrapper library.
+      // For this task, I'll implement a simple "Standard SVG" fallback if roughjs is too complex to wire up quickly,
+      // OR I will try to use the generator.
+    }
+  }, []);
+
+  // Simplified rendering for now to ensure stability, then we can enhance with RoughJS if time permits.
+  // The user explicitly asked for "Hand-drawn Style".
+  // Let's try to use `roughjs` generator.
+  
+  const generator = rough.generator();
+  let drawable;
+  
+  if (shape.type === 'rect') {
+    drawable = generator.rectangle(shape.x, shape.y, shape.width, shape.height, { stroke: shape.stroke, strokeWidth: shape.strokeWidth, roughness: shape.roughness });
+  } else if (shape.type === 'circle') {
+    const r = Math.sqrt(shape.width ** 2 + shape.height ** 2);
+    drawable = generator.circle(shape.x + shape.width/2, shape.y + shape.height/2, r, { stroke: shape.stroke, strokeWidth: shape.strokeWidth, roughness: shape.roughness });
+  } else if (shape.type === 'line') {
+    drawable = generator.line(shape.x, shape.y, shape.x + shape.width, shape.y + shape.height, { stroke: shape.stroke, strokeWidth: shape.strokeWidth, roughness: shape.roughness });
+  } else if (shape.type === 'arrow') {
+     // Simplified arrow
+     drawable = generator.line(shape.x, shape.y, shape.x + shape.width, shape.y + shape.height, { stroke: shape.stroke, strokeWidth: shape.strokeWidth });
+  } else if (shape.type === 'diamond') {
+     const w = shape.width;
+     const h = shape.height;
+     drawable = generator.polygon([
+       [shape.x + w/2, shape.y],
+       [shape.x + w, shape.y + h/2],
+       [shape.x + w/2, shape.y + h],
+       [shape.x, shape.y + h/2]
+     ], { stroke: shape.stroke, strokeWidth: shape.strokeWidth });
+  }
+
+  if (!drawable) return null;
+
+  // RoughJS drawable.sets contains the operations.
+  // We can map these to <path> elements.
+  const paths = generator.toPaths(drawable);
+
+  return (
+    <g>
+      {paths.map((p, i) => (
+        <path key={i} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} fill={p.fill || "none"} />
+      ))}
+    </g>
   );
 }

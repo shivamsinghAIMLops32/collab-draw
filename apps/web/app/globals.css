@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #121212;
+  --foreground: #ffffff;
+  --surface: #232323;
+  --surface-hover: #2c2c2c;
+  --border: #333333;
+  --primary: #a8a8ff;
+  --primary-foreground: #000000;
+  --muted: #888888;
+  --accent: #404040;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.tool-btn {
+  @apply p-2 rounded-lg transition-colors hover:bg-[var(--surface-hover)] text-[var(--muted)];
+}
+
+.tool-btn.active {
+  @apply bg-[var(--primary)] text-[var(--primary-foreground)];
+}
+
+.canvas-container {
+  background-color: var(--background);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
